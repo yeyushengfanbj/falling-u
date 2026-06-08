@@ -3,3 +3,6 @@ dist/
 .astro/
 .DS_Store
 .env
+runtime/
+imports/jd-shares.txt
+imports/product-drafts.json

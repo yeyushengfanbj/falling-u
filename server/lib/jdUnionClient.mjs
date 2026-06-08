@@ -88,6 +88,51 @@ export function normalizeJdGoodsResponse(raw) {
   }));
 }
 
+function walk(value, visit) {
+  if (!value || typeof value !== 'object') {
+    return;
+  }
+
+  if (Array.isArray(value)) {
+    value.forEach((item) => walk(item, visit));
+    return;
+  }
+
+  for (const [key, child] of Object.entries(value)) {
+    visit(key, child);
+    walk(child, visit);
+  }
+}
+
+function findValueByKey(raw, keys) {
+  let found = '';
+  walk(raw, (key, value) => {
+    if (found || typeof value !== 'string') {
+      return;
+    }
+
+    if (keys.some((target) => key.toLowerCase() === target.toLowerCase())) {
+      found = value;
+    }
+  });
+  return found;
+}
+
+export function normalizePromotionResponse(raw) {
+  const unwrapped = unwrapJdUnionResponse(raw);
+  const result = parseMaybeJson(unwrapped);
+  const shortUrl = findValueByKey(result, ['shortURL', 'shortUrl', 'short_url']);
+  const clickUrl = findValueByKey(result, ['clickURL', 'clickUrl', 'click_url']);
+  const jCommand = findValueByKey(result, ['jCommand', 'command']);
+
+  return {
+    shortUrl,
+    clickUrl,
+    jCommand,
+    rawResult: result,
+  };
+}
+
 export function createJdUnionClient(config) {
   return {
     async call(method, payload) {

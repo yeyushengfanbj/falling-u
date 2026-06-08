@@ -1,8 +1,16 @@
 import http from 'node:http';
 
 import { loadEnv, getServerConfig } from './lib/env.mjs';
-import { createJdUnionClient, normalizeJdGoodsResponse } from './lib/jdUnionClient.mjs';
+import { createJdUnionClient, normalizeJdGoodsResponse, normalizePromotionResponse } from './lib/jdUnionClient.mjs';
 import { readProducts } from './lib/productsRepository.mjs';
+import {
+  createProductDraft,
+  deleteProductDraft,
+  publishProductDraft,
+  readDrafts,
+  updateProductDraft,
+} from './lib/productDraftsRepository.mjs';
+import { recordClickEvent, summarizeClicks } from './lib/clickEventsRepository.mjs';
 import {
   getBearerToken,
   readJsonBody,
@@ -83,17 +91,54 @@ async function handleAdminPromotionLink(req, res) {
   });
 
   const raw = await jdUnion.call('jd.union.open.promotion.common.get', { promotionCodeReq });
-  sendJson(res, { ok: true, raw });
+  sendJson(res, { ok: true, promotion: normalizePromotionResponse(raw), raw });
+}
+
+async function handleCreateDraft(req, res) {
+  ensureAdmin(req);
+  const body = await readJsonBody(req);
+  const draft = createProductDraft(body);
+  sendJson(res, { ok: true, draft }, 201);
+}
+
+async function handleUpdateDraft(req, res, id) {
+  ensureAdmin(req);
+  const body = await readJsonBody(req);
+  const draft = updateProductDraft(id, body);
+  sendJson(res, { ok: true, draft });
+}
+
+async function handleDeleteDraft(req, res, id) {
+  ensureAdmin(req);
+  const draft = deleteProductDraft(id);
+  sendJson(res, { ok: true, draft });
+}
+
+async function handlePublishDraft(req, res, id) {
+  ensureAdmin(req);
+  const product = publishProductDraft(id);
+  sendJson(res, { ok: true, product });
+}
+
+async function handleRecordClick(req, res) {
+  const body = await readJsonBody(req);
+  const click = recordClickEvent({
+    productId: body.productId,
+    referrer: body.referrer || req.headers.referer,
+    userAgent: body.userAgent || req.headers['user-agent'],
+  });
+  sendJson(res, { ok: true, click }, 201);
 }
 
 async function route(req, res) {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+  const pathname = url.pathname;
 
   if (req.method === 'OPTIONS') {
     return sendNoContent(res);
   }
 
-  if (req.method === 'GET' && url.pathname === '/api/health') {
+  if (req.method === 'GET' && pathname === '/api/health') {
     return sendJson(res, {
       ok: true,
       service: 'falling-u-api',
@@ -101,19 +146,51 @@ async function route(req, res) {
     });
   }
 
-  if (req.method === 'GET' && url.pathname === '/api/products') {
+  if (req.method === 'GET' && pathname === '/api/products') {
     return sendJson(res, {
       ok: true,
       products: readProducts(),
     });
   }
 
-  if (req.method === 'POST' && url.pathname === '/api/admin/jd/goods/search') {
+  if (req.method === 'POST' && pathname === '/api/admin/jd/goods/search') {
     return handleAdminGoodsSearch(req, res);
   }
 
-  if (req.method === 'POST' && url.pathname === '/api/admin/jd/promotion/link') {
+  if (req.method === 'POST' && pathname === '/api/admin/jd/promotion/link') {
     return handleAdminPromotionLink(req, res);
+  }
+
+  if (req.method === 'GET' && pathname === '/api/admin/products/drafts') {
+    ensureAdmin(req);
+    return sendJson(res, { ok: true, drafts: readDrafts() });
+  }
+
+  if (req.method === 'POST' && pathname === '/api/admin/products/drafts') {
+    return handleCreateDraft(req, res);
+  }
+
+  const draftMatch = pathname.match(/^\/api\/admin\/products\/drafts\/([^/]+)$/);
+  if (req.method === 'PATCH' && draftMatch) {
+    return handleUpdateDraft(req, res, decodeURIComponent(draftMatch[1]));
+  }
+
+  if (req.method === 'DELETE' && draftMatch) {
+    return handleDeleteDraft(req, res, decodeURIComponent(draftMatch[1]));
+  }
+
+  const publishMatch = pathname.match(/^\/api\/admin\/products\/drafts\/([^/]+)\/publish$/);
+  if (req.method === 'POST' && publishMatch) {
+    return handlePublishDraft(req, res, decodeURIComponent(publishMatch[1]));
+  }
+
+  if (req.method === 'POST' && pathname === '/api/clicks') {
+    return handleRecordClick(req, res);
+  }
+
+  if (req.method === 'GET' && pathname === '/api/admin/clicks/summary') {
+    ensureAdmin(req);
+    return sendJson(res, { ok: true, summary: summarizeClicks() });
   }
 
   return sendError(res, 404, 'API route not found.');
@@ -122,7 +199,10 @@ async function route(req, res) {
 const server = http.createServer((req, res) => {
   route(req, res).catch((error) => {
     console.error(error);
-    sendError(res, error.statusCode || 500, error.message || 'Internal server error.');
+    sendError(res, error.statusCode || 500, error.message || 'Internal server error.', {
+      ...(error.details ? { details: error.details } : {}),
+      ...(error.response ? { upstream: error.response } : {}),
+    });
   });
 });
 

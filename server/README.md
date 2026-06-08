@@ -13,11 +13,24 @@ npm run server:dev
 
 - `GET /api/health`
 - `GET /api/products`
+- `POST /api/clicks`
 
 管理接口需要 `SERVER_ADMIN_TOKEN`，用 `Authorization: Bearer <token>` 或 `x-admin-token: <token>` 调用：
 
 - `POST /api/admin/jd/goods/search`
 - `POST /api/admin/jd/promotion/link`
+- `GET /api/admin/products/drafts`
+- `POST /api/admin/products/drafts`
+- `PATCH /api/admin/products/drafts/:id`
+- `DELETE /api/admin/products/drafts/:id`
+- `POST /api/admin/products/drafts/:id/publish`
+- `GET /api/admin/clicks/summary`
+
+本地后台页面：
+
+```text
+http://127.0.0.1:4321/admin/
+```
 
 ## 京东联盟接口
 
@@ -48,6 +61,19 @@ curl -X POST http://127.0.0.1:8787/api/admin/jd/promotion/link \
   -H 'authorization: Bearer change-me' \
   -d '{"materialId":"https://item.jd.com/10111784658291.html"}'
 ```
+
+## 商品草稿接口
+
+保存草稿示例：
+
+```bash
+curl -X POST http://127.0.0.1:8787/api/admin/products/drafts \
+  -H 'content-type: application/json' \
+  -H 'authorization: Bearer change-me' \
+  -d '{"product":{"skuId":"10111784658291","skuName":"Redmi 显示器 A27U","price":1099,"finalPrice":1039},"affiliateUrl":"https://u.jd.com/7g1iLqE"}'
+```
+
+后台也支持在 `/admin/` 手动新增草稿。草稿需要补齐字段并将 `importStatus` 改为 `ready` 后才允许发布。发布会校验必填字段、京东联盟短链、分类、价格、规格和重复商品。
 
 ## 同域名部署
 

@@ -12,6 +12,7 @@
     "check:links": "node scripts/check-affiliate-links.mjs",
     "import:jd": "node scripts/import-jd-shares.mjs",
     "merge:drafts": "node scripts/merge-product-drafts.mjs",
+    "test:drafts": "node scripts/test-product-drafts.mjs",
     "spec:list": "openspec list",
     "spec:list:all": "openspec list && openspec list --specs",
     "spec:validate": "openspec validate --all --strict",

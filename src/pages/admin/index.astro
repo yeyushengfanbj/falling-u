@@ -1,0 +1,472 @@
+---
+import { Database, KeyRound, RefreshCcw, Search, ShieldCheck } from 'lucide-astro';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { categories } from '@/data/site';
+---
+
+<BaseLayout title="后台管理" description="falling-u 商品草稿、京东联盟接口和点击统计管理。">
+  <section class="admin-hero">
+    <div class="container admin-hero-inner">
+      <div>
+        <p class="eyebrow"><ShieldCheck size={18} aria-hidden="true" /> 管理后台</p>
+        <h1>商品草稿和京东联盟工作台</h1>
+        <p>先把商品搜索、转链、草稿复核和发布流程跑顺。京东联盟参数等网站备案完成后再填入服务器环境变量。</p>
+      </div>
+      <div class="admin-connection">
+        <label>
+          <span><KeyRound size={16} aria-hidden="true" /> Admin Token</span>
+          <input id="adminToken" type="password" autocomplete="off" placeholder="SERVER_ADMIN_TOKEN" />
+        </label>
+        <label>
+          <span>API Base</span>
+          <input id="apiBase" type="url" placeholder="http://127.0.0.1:8787" />
+        </label>
+        <div class="admin-actions">
+          <button class="button" id="saveSettings" type="button">保存</button>
+          <button class="button secondary light" id="loadDrafts" type="button">
+            <RefreshCcw size={16} aria-hidden="true" /> 刷新
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section tight">
+    <div class="container admin-layout">
+      <section class="admin-panel">
+        <div class="admin-panel-header">
+          <div>
+            <h2>京东商品搜索</h2>
+            <p>需要服务器 `.env` 已配置京东联盟开放平台凭证。没配置时这里会显示接口错误，页面本身仍可用于草稿管理。</p>
+          </div>
+        </div>
+        <form class="admin-search-form" id="jdSearchForm">
+          <label>
+            <span>搜索模式</span>
+            <select id="searchMode">
+              <option value="keyword">关键词</option>
+              <option value="sku">SKU</option>
+            </select>
+          </label>
+          <label>
+            <span>关键词 / SKU</span>
+            <input id="searchValue" type="search" placeholder="例如：显示器 或 10111784658291" />
+          </label>
+          <label>
+            <span>数量</span>
+            <input id="pageSize" type="number" min="1" max="50" value="10" />
+          </label>
+          <button class="button" type="submit"><Search size={17} aria-hidden="true" /> 搜索</button>
+        </form>
+        <div class="admin-message" id="searchMessage" hidden></div>
+        <div class="admin-results" id="searchResults"></div>
+      </section>
+
+      <section class="admin-panel">
+        <div class="admin-panel-header">
+          <div>
+            <h2>点击统计</h2>
+            <p>统计 `/go/[id]` 出站点击，失败不影响用户跳转。</p>
+          </div>
+          <button class="button secondary light" id="loadClicks" type="button">
+            <Database size={16} aria-hidden="true" /> 读取
+          </button>
+        </div>
+        <div class="admin-metrics" id="clickSummary"></div>
+      </section>
+    </div>
+  </section>
+
+  <section class="section tight">
+    <div class="container">
+      <section class="admin-panel">
+        <div class="admin-panel-header">
+          <div>
+            <h2>商品草稿</h2>
+            <p>草稿标记为 ready 后才能发布；发布会校验必填字段、分类、价格、联盟短链和重复商品。</p>
+          </div>
+        </div>
+        <details class="admin-manual-create">
+          <summary>手动新增草稿</summary>
+          <form id="manualDraftForm" class="admin-draft admin-draft-compact">
+            <div class="admin-form-grid">
+              <label><span>SKU</span><input name="skuId" placeholder="京东 SKU，可选" /></label>
+              <label><span>分类</span><select name="category">{categories.map((category) => <option value={category.slug}>{category.name}</option>)}</select></label>
+              <label><span>名称</span><input name="name" placeholder="商品短名称" required /></label>
+              <label><span>类型</span><input name="typeLabel" placeholder="例如 4K 显示器" required /></label>
+              <label><span>京东价</span><input name="jdPrice" type="number" step="0.01" min="0" required /></label>
+              <label><span>到手价</span><input name="finalPrice" type="number" step="0.01" min="0" required /></label>
+              <label><span>价格带</span><input name="priceBand" placeholder="约 1000-2000 元" required /></label>
+              <label><span>状态</span><select name="importStatus"><option value="draft">draft</option><option value="ready">ready</option><option value="needsReview">needsReview</option></select></label>
+            </div>
+            <label><span>京东标题</span><input name="jdTitle" placeholder="完整京东商品标题" required /></label>
+            <label><span>商品链接</span><input name="jdItemUrl" placeholder="https://item.jd.com/xxx.html" /></label>
+            <label><span>推广链接</span><input name="affiliateUrl" placeholder="https://u.jd.com/..." /></label>
+            <label><span>商品图</span><input name="image" placeholder="https://imgxx.360buyimg.com/..." /></label>
+            <label><span>摘要</span><textarea name="summary" rows="3" required></textarea></label>
+            <label><span>适合人群</span><input name="bestFor" required /></label>
+            <div class="admin-form-grid">
+              <label><span>规格（逗号或换行）</span><textarea name="specs" rows="3" required></textarea></label>
+              <label><span>标签（逗号或换行）</span><textarea name="tags" rows="3"></textarea></label>
+            </div>
+            <div class="admin-actions">
+              <button class="button" type="submit">保存为草稿</button>
+              <button class="button secondary light" type="reset">清空</button>
+            </div>
+          </form>
+        </details>
+        <div class="admin-message" id="draftMessage" hidden></div>
+        <div class="admin-drafts" id="draftList"></div>
+      </section>
+    </div>
+  </section>
+
+  <script define:vars={{ categories }}>
+    const tokenInput = document.getElementById('adminToken');
+    const apiBaseInput = document.getElementById('apiBase');
+    const saveSettings = document.getElementById('saveSettings');
+    const loadDraftsButton = document.getElementById('loadDrafts');
+    const loadClicksButton = document.getElementById('loadClicks');
+    const jdSearchForm = document.getElementById('jdSearchForm');
+    const manualDraftForm = document.getElementById('manualDraftForm');
+    const searchMode = document.getElementById('searchMode');
+    const searchValue = document.getElementById('searchValue');
+    const pageSize = document.getElementById('pageSize');
+    const searchMessage = document.getElementById('searchMessage');
+    const draftMessage = document.getElementById('draftMessage');
+    const searchResults = document.getElementById('searchResults');
+    const draftList = document.getElementById('draftList');
+    const clickSummary = document.getElementById('clickSummary');
+    const promotions = new Map();
+    const categoryOptions = categories.map((category) => `<option value="${category.slug}">${category.name}</option>`).join('');
+
+    const defaultApiBase = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? 'http://127.0.0.1:8787'
+      : '';
+
+    tokenInput.value = localStorage.getItem('fallingAdminToken') || '';
+    apiBaseInput.value = localStorage.getItem('fallingAdminApiBase') || defaultApiBase;
+
+    const getApiBase = () => apiBaseInput.value.trim().replace(/\/$/, '');
+    const getToken = () => tokenInput.value.trim();
+
+    const showMessage = (target, message, type = 'info') => {
+      target.hidden = false;
+      target.textContent = message;
+      target.dataset.type = type;
+    };
+
+    const clearMessage = (target) => {
+      target.hidden = true;
+      target.textContent = '';
+      delete target.dataset.type;
+    };
+
+    const request = async (path, options = {}) => {
+      const token = getToken();
+      const headers = {
+        ...(options.body ? { 'content-type': 'application/json' } : {}),
+        ...(token ? { authorization: `Bearer ${token}` } : {}),
+        ...options.headers,
+      };
+      const response = await fetch(`${getApiBase()}${path}`, { ...options, headers });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || payload.ok === false) {
+        const details = payload.details ? `：${payload.details.join('；')}` : '';
+        throw new Error(`${payload.error || `HTTP ${response.status}`}${details}`);
+      }
+      return payload;
+    };
+
+    const money = (value) => Number(value || 0).toLocaleString('zh-CN', {
+      minimumFractionDigits: Number.isInteger(Number(value || 0)) ? 0 : 2,
+      maximumFractionDigits: 2,
+    });
+
+    const htmlEscape = (value) => String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+
+    const parseList = (value) => String(value || '')
+      .split(/[,，\n]/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+    const renderSearchResults = (items) => {
+      if (!items.length) {
+        searchResults.innerHTML = '<div class="empty-state"><h3>没有搜索结果</h3><p>换个关键词或 SKU 再试。</p></div>';
+        return;
+      }
+
+      searchResults.innerHTML = items.map((item, index) => {
+        const key = item.skuId || item.materialUrl || index;
+        return `
+          <article class="admin-result" data-result-index="${index}">
+            ${item.imageUrl ? `<img src="${htmlEscape(item.imageUrl)}" alt="" loading="lazy" />` : '<div class="admin-result-placeholder">京东</div>'}
+            <div>
+              <h3>${htmlEscape(item.skuName || '未命名商品')}</h3>
+              <p>${htmlEscape(item.materialUrl || '')}</p>
+              <div class="admin-meta">
+                <span>SKU ${htmlEscape(item.skuId || '-')}</span>
+                <span>¥${money(item.finalPrice || item.price)}</span>
+                ${item.commissionShare ? `<span>佣金 ${htmlEscape(item.commissionShare)}%</span>` : ''}
+              </div>
+              <div class="admin-actions">
+                <button class="button secondary light" type="button" data-action="link" data-key="${htmlEscape(key)}" data-index="${index}">
+                  转链
+                </button>
+                <button class="button" type="button" data-action="draft" data-key="${htmlEscape(key)}" data-index="${index}">
+                  存草稿
+                </button>
+              </div>
+            </div>
+          </article>
+        `;
+      }).join('');
+
+      searchResults.querySelectorAll('[data-action="link"]').forEach((button) => {
+        button.addEventListener('click', async () => {
+          const item = items[Number(button.dataset.index)];
+          const materialId = item.materialUrl || item.jdItemUrl || item.url;
+          if (!materialId) {
+            showMessage(searchMessage, '该商品缺少 materialUrl，无法转链。', 'error');
+            return;
+          }
+          button.setAttribute('disabled', 'true');
+          try {
+            const payload = await request('/api/admin/jd/promotion/link', {
+              method: 'POST',
+              body: JSON.stringify({ materialId }),
+            });
+            promotions.set(button.dataset.key, payload.promotion);
+            showMessage(searchMessage, `转链完成：${payload.promotion.shortUrl || payload.promotion.clickUrl || '已返回原始结果'}`, 'success');
+          } catch (error) {
+            showMessage(searchMessage, error.message, 'error');
+          } finally {
+            button.removeAttribute('disabled');
+          }
+        });
+      });
+
+      searchResults.querySelectorAll('[data-action="draft"]').forEach((button) => {
+        button.addEventListener('click', async () => {
+          const item = items[Number(button.dataset.index)];
+          const promotion = promotions.get(button.dataset.key);
+          button.setAttribute('disabled', 'true');
+          try {
+            const payload = await request('/api/admin/products/drafts', {
+              method: 'POST',
+              body: JSON.stringify({
+                product: item,
+                promotion,
+                affiliateUrl: promotion?.shortUrl || promotion?.clickUrl || '',
+              }),
+            });
+            showMessage(searchMessage, `已保存草稿：${payload.draft.name}`, 'success');
+            await loadDrafts();
+          } catch (error) {
+            showMessage(searchMessage, error.message, 'error');
+          } finally {
+            button.removeAttribute('disabled');
+          }
+        });
+      });
+    };
+
+    const renderDrafts = (drafts) => {
+      if (!drafts.length) {
+        draftList.innerHTML = '<div class="empty-state"><h3>暂无草稿</h3><p>搜索京东商品并保存草稿，或继续使用导入脚本。</p></div>';
+        return;
+      }
+
+      draftList.innerHTML = drafts.map((draft) => `
+        <form class="admin-draft" data-draft-id="${htmlEscape(draft.id)}">
+          <div class="admin-draft-head">
+            <div>
+              <h3>${htmlEscape(draft.name)}</h3>
+              <p>${htmlEscape(draft.jdTitle)}</p>
+            </div>
+            <span class="status-badge">${htmlEscape(draft.importStatus || 'draft')}</span>
+          </div>
+          <div class="admin-form-grid">
+            <label><span>ID</span><input name="id" value="${htmlEscape(draft.id)}" /></label>
+            <label><span>分类</span><select name="category">${categoryOptions}</select></label>
+            <label><span>名称</span><input name="name" value="${htmlEscape(draft.name)}" /></label>
+            <label><span>类型</span><input name="typeLabel" value="${htmlEscape(draft.typeLabel)}" /></label>
+            <label><span>京东价</span><input name="jdPrice" type="number" step="0.01" value="${htmlEscape(draft.jdPrice)}" /></label>
+            <label><span>到手价</span><input name="finalPrice" type="number" step="0.01" value="${htmlEscape(draft.finalPrice)}" /></label>
+            <label><span>价格带</span><input name="priceBand" value="${htmlEscape(draft.priceBand)}" /></label>
+            <label><span>状态</span><select name="importStatus"><option value="draft">draft</option><option value="ready">ready</option><option value="needsReview">needsReview</option></select></label>
+          </div>
+          <label><span>推广链接</span><input name="affiliateUrl" value="${htmlEscape(draft.affiliateUrl)}" /></label>
+          <label><span>商品图</span><input name="image" value="${htmlEscape(draft.image || '')}" /></label>
+          <label><span>摘要</span><textarea name="summary" rows="3">${htmlEscape(draft.summary)}</textarea></label>
+          <label><span>适合人群</span><input name="bestFor" value="${htmlEscape(draft.bestFor)}" /></label>
+          <div class="admin-form-grid">
+            <label><span>规格（逗号或换行）</span><textarea name="specs" rows="3">${htmlEscape((draft.specs || []).join('\\n'))}</textarea></label>
+            <label><span>标签（逗号或换行）</span><textarea name="tags" rows="3">${htmlEscape((draft.tags || []).join('\\n'))}</textarea></label>
+          </div>
+          <div class="admin-actions">
+            <button class="button secondary light" type="submit">保存修改</button>
+            <button class="button" type="button" data-publish>发布</button>
+            <button class="button danger" type="button" data-delete>删除</button>
+          </div>
+        </form>
+      `).join('');
+
+      drafts.forEach((draft) => {
+        const form = draftList.querySelector(`[data-draft-id="${CSS.escape(draft.id)}"]`);
+        form.elements.category.value = draft.category;
+        form.elements.importStatus.value = draft.importStatus || 'draft';
+      });
+
+      draftList.querySelectorAll('.admin-draft').forEach((form) => {
+        form.addEventListener('submit', async (event) => {
+          event.preventDefault();
+          const data = Object.fromEntries(new FormData(form).entries());
+          data.jdPrice = Number(data.jdPrice);
+          data.finalPrice = Number(data.finalPrice);
+          data.specs = parseList(data.specs);
+          data.tags = parseList(data.tags);
+          try {
+            const payload = await request(`/api/admin/products/drafts/${encodeURIComponent(form.dataset.draftId)}`, {
+              method: 'PATCH',
+              body: JSON.stringify(data),
+            });
+            showMessage(draftMessage, `已保存：${payload.draft.name}`, 'success');
+            await loadDrafts();
+          } catch (error) {
+            showMessage(draftMessage, error.message, 'error');
+          }
+        });
+
+        form.querySelector('[data-publish]').addEventListener('click', async () => {
+          try {
+            const payload = await request(`/api/admin/products/drafts/${encodeURIComponent(form.dataset.draftId)}/publish`, {
+              method: 'POST',
+            });
+            showMessage(draftMessage, `已发布：${payload.product.name}`, 'success');
+            await loadDrafts();
+          } catch (error) {
+            showMessage(draftMessage, error.message, 'error');
+          }
+        });
+
+        form.querySelector('[data-delete]').addEventListener('click', async () => {
+          if (!window.confirm('确定删除这个草稿吗？')) {
+            return;
+          }
+
+          try {
+            const payload = await request(`/api/admin/products/drafts/${encodeURIComponent(form.dataset.draftId)}`, {
+              method: 'DELETE',
+            });
+            showMessage(draftMessage, `已删除草稿：${payload.draft.name}`, 'success');
+            await loadDrafts();
+          } catch (error) {
+            showMessage(draftMessage, error.message, 'error');
+          }
+        });
+      });
+    };
+
+    const loadDrafts = async () => {
+      clearMessage(draftMessage);
+      try {
+        const payload = await request('/api/admin/products/drafts');
+        renderDrafts(payload.drafts);
+      } catch (error) {
+        showMessage(draftMessage, error.message, 'error');
+      }
+    };
+
+    const loadClicks = async () => {
+      try {
+        const payload = await request('/api/admin/clicks/summary');
+        clickSummary.innerHTML = payload.summary.length
+          ? payload.summary.map((item) => `<span><strong>${htmlEscape(item.productId)}</strong>${item.clicks} 次</span>`).join('')
+          : '<span><strong>暂无</strong>点击记录</span>';
+      } catch (error) {
+        clickSummary.innerHTML = `<span><strong>错误</strong>${htmlEscape(error.message)}</span>`;
+      }
+    };
+
+    saveSettings.addEventListener('click', () => {
+      localStorage.setItem('fallingAdminToken', getToken());
+      localStorage.setItem('fallingAdminApiBase', getApiBase());
+      showMessage(draftMessage, '后台连接设置已保存。', 'success');
+    });
+
+    loadDraftsButton.addEventListener('click', loadDrafts);
+    loadClicksButton.addEventListener('click', loadClicks);
+
+    jdSearchForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      clearMessage(searchMessage);
+      searchResults.innerHTML = '';
+      const value = searchValue.value.trim();
+      if (!value) {
+        showMessage(searchMessage, '请输入关键词或 SKU。', 'error');
+        return;
+      }
+
+      const body = searchMode.value === 'sku'
+        ? { skuIds: [value], pageSize: Number(pageSize.value || 10) }
+        : { keyword: value, pageSize: Number(pageSize.value || 10) };
+
+      try {
+        const payload = await request('/api/admin/jd/goods/search', {
+          method: 'POST',
+          body: JSON.stringify(body),
+        });
+        renderSearchResults(payload.items || []);
+      } catch (error) {
+        showMessage(searchMessage, error.message, 'error');
+      }
+    });
+
+    manualDraftForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      clearMessage(draftMessage);
+      const data = Object.fromEntries(new FormData(manualDraftForm).entries());
+      const product = {
+        skuId: data.skuId,
+        category: data.category,
+        name: data.name,
+        jdTitle: data.jdTitle,
+        jdItemUrl: data.jdItemUrl,
+        summary: data.summary,
+        bestFor: data.bestFor,
+        priceBand: data.priceBand,
+        jdPrice: Number(data.jdPrice),
+        finalPrice: Number(data.finalPrice),
+        image: data.image,
+        typeLabel: data.typeLabel,
+        specs: parseList(data.specs),
+        tags: parseList(data.tags),
+        importStatus: data.importStatus,
+      };
+
+      try {
+        const payload = await request('/api/admin/products/drafts', {
+          method: 'POST',
+          body: JSON.stringify({
+            product,
+            affiliateUrl: data.affiliateUrl,
+            source: 'admin-manual',
+          }),
+        });
+        manualDraftForm.reset();
+        showMessage(draftMessage, `已新增草稿：${payload.draft.name}`, 'success');
+        await loadDrafts();
+      } catch (error) {
+        showMessage(draftMessage, error.message, 'error');
+      }
+    });
+
+    loadDrafts();
+    loadClicks();
+  </script>
+</BaseLayout>

@@ -18,6 +18,14 @@ npm run server:dev
 
 本地后端默认监听 `http://127.0.0.1:8787`，健康检查是 `GET /api/health`。
 
+后台工作台：
+
+```text
+http://127.0.0.1:4321/admin/
+```
+
+后台页面需要填写 `.env` 里的 `SERVER_ADMIN_TOKEN`，本地前后端分端口开发时 API Base 填 `http://127.0.0.1:8787`。备案和京东开放平台参数完成前，也可以先用后台的“手动新增草稿”维护商品库。
+
 ## 站点定位
 
 - 首页先做商品搜索、分类筛选和优惠商品流。
@@ -45,6 +53,8 @@ npm run server:dev
 4. 复核分类、摘要、规格和商品图后，将草稿的 `importStatus` 改成 `ready`。
 5. 合并 ready 草稿到正式商品库。
 
+也可以直接在 `/admin/` 手动新增草稿、复核并发布。
+
 ```bash
 npm run import:jd
 npm run merge:drafts
@@ -62,6 +72,8 @@ imports/                京东分享文案和导入草稿
 scripts/audit-catalog.mjs 商品库数量与分类缺口审计
 scripts/import-jd-shares.mjs 京东分享文案批量解析脚本
 scripts/merge-product-drafts.mjs 商品草稿合并脚本
+scripts/test-product-drafts.mjs 商品草稿发布校验脚本
+src/pages/admin/       商品草稿、京东联盟接口和点击统计后台
 src/pages/tools/        工具页
 docs/OPERATING_PLAN.md  成本、获客、收入模型和执行计划
 docs/DEVELOPMENT_PLAN.md 开发路线图和京东联盟 API 对接计划

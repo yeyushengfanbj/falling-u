@@ -25,7 +25,7 @@ export async function readJsonBody(req) {
 
 function setDefaultHeaders(res) {
   res.setHeader('access-control-allow-origin', process.env.CORS_ORIGIN || '*');
-  res.setHeader('access-control-allow-methods', 'GET,POST,OPTIONS');
+  res.setHeader('access-control-allow-methods', 'GET,POST,PATCH,DELETE,OPTIONS');
   res.setHeader('access-control-allow-headers', 'content-type,authorization,x-admin-token');
 }
 

@@ -15,3 +15,11 @@ export function readProducts() {
 
   return parsed;
 }
+
+export function writeProducts(products) {
+  if (!Array.isArray(products)) {
+    throw new Error('Products must be an array.');
+  }
+
+  fs.writeFileSync(productFile, `${JSON.stringify(products, null, 2)}\n`);
+}
