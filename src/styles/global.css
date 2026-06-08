@@ -1621,17 +1621,66 @@ select {
     font-size: 2.2rem;
   }
 
+  .market-search-panel {
+    gap: 8px;
+    padding: 10px;
+  }
+
   .search-form {
-    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 6px;
+    min-height: 42px;
+    padding: 4px;
+    border-width: 1px;
+  }
+
+  .search-form input {
+    font-size: 0.9rem;
   }
 
   .search-form .button {
-    grid-column: 1 / -1;
-    width: 100%;
+    min-height: 32px;
+    width: auto;
+    padding-inline: 10px;
+    font-size: 0.82rem;
+  }
+
+  .hot-searches {
+    flex-wrap: nowrap;
+    gap: 6px;
+    margin-inline: -2px;
+    overflow-x: auto;
+    padding: 0 2px 2px;
+    scrollbar-width: none;
+  }
+
+  .hot-searches::-webkit-scrollbar {
+    display: none;
+  }
+
+  .hot-searches button {
+    flex: 0 0 auto;
+    min-height: 26px;
+    padding: 3px 8px;
+    font-size: 0.74rem;
   }
 
   .market-stats {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 5px;
+  }
+
+  .market-stats span {
+    justify-items: center;
+    min-height: 36px;
+    padding: 5px 3px;
+    text-align: center;
+    font-size: 0.64rem;
+    line-height: 1.15;
+  }
+
+  .market-stats strong {
+    font-size: 0.9rem;
   }
 
   .category-rail-section {
