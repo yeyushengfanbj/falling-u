@@ -30,6 +30,27 @@ const displayPrice = (price: number) =>
 const sameCategoryProducts = products.filter((item) => item.category === product.category && item.id !== product.id);
 const fallbackProducts = products.filter((item) => item.category !== product.category && item.id !== product.id);
 const relatedProducts = [...sameCategoryProducts, ...fallbackProducts].slice(0, 3);
+const productJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Product',
+  name: product.jdTitle,
+  image: product.image ? [product.image] : undefined,
+  description: product.summary,
+  sku: product.jdSku,
+  category: category?.name ?? product.category,
+  brand: {
+    '@type': 'Brand',
+    name: product.name.split(/\s+/)[0]
+  },
+  offers: {
+    '@type': 'Offer',
+    url: `https://${site.domain}/go/${product.id}/`,
+    priceCurrency: 'CNY',
+    price: product.finalPrice,
+    availability: 'https://schema.org/InStock',
+    itemCondition: 'https://schema.org/NewCondition'
+  }
+};
 
 const iconByProductId = {
   'monitor-4k-27': Monitor,
@@ -43,6 +64,7 @@ const ProductIcon = iconByProductId[product.id as keyof typeof iconByProductId] 
 ---
 
 <BaseLayout title={product.name} description={product.summary}>
+  <script type="application/ld+json" set:html={JSON.stringify(productJsonLd)} />
   <section class="product-detail">
     <div class="container">
       <div class="breadcrumb">

@@ -3,6 +3,7 @@ import http from 'node:http';
 import { loadEnv, getServerConfig } from './lib/env.mjs';
 import { createJdUnionClient, normalizeJdGoodsResponse, normalizePromotionResponse } from './lib/jdUnionClient.mjs';
 import { readProducts } from './lib/productsRepository.mjs';
+import { searchProducts } from './lib/productSearch.mjs';
 import {
   createProductDraft,
   deleteProductDraft,
@@ -10,7 +11,12 @@ import {
   readDrafts,
   updateProductDraft,
 } from './lib/productDraftsRepository.mjs';
-import { recordClickEvent, summarizeClicks } from './lib/clickEventsRepository.mjs';
+import {
+  recordClickEvent,
+  recordExposureEvent,
+  summarizeClicks,
+  summarizeExposures,
+} from './lib/clickEventsRepository.mjs';
 import {
   getBearerToken,
   readJsonBody,
@@ -130,6 +136,16 @@ async function handleRecordClick(req, res) {
   sendJson(res, { ok: true, click }, 201);
 }
 
+async function handleRecordExposure(req, res) {
+  const body = await readJsonBody(req);
+  const exposure = recordExposureEvent({
+    productId: body.productId,
+    referrer: body.referrer || req.headers.referer,
+    userAgent: body.userAgent || req.headers['user-agent'],
+  });
+  sendJson(res, { ok: true, exposure }, 201);
+}
+
 async function route(req, res) {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = url.pathname;
@@ -150,6 +166,19 @@ async function route(req, res) {
     return sendJson(res, {
       ok: true,
       products: readProducts(),
+    });
+  }
+
+  if (req.method === 'GET' && pathname === '/api/products/search') {
+    return sendJson(res, {
+      ok: true,
+      ...searchProducts(readProducts(), {
+        q: url.searchParams.get('q'),
+        category: url.searchParams.get('category') || 'all',
+        sort: url.searchParams.get('sort') || 'recommend',
+        offset: url.searchParams.get('offset') || 0,
+        limit: url.searchParams.get('limit') || 24,
+      }),
     });
   }
 
@@ -188,9 +217,13 @@ async function route(req, res) {
     return handleRecordClick(req, res);
   }
 
+  if (req.method === 'POST' && pathname === '/api/exposures') {
+    return handleRecordExposure(req, res);
+  }
+
   if (req.method === 'GET' && pathname === '/api/admin/clicks/summary') {
     ensureAdmin(req);
-    return sendJson(res, { ok: true, summary: summarizeClicks() });
+    return sendJson(res, { ok: true, summary: summarizeClicks(), exposures: summarizeExposures() });
   }
 
   return sendError(res, 404, 'API route not found.');

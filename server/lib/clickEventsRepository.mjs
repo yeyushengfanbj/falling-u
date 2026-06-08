@@ -22,6 +22,14 @@ function writeEvents(events) {
 }
 
 export function recordClickEvent(event = {}) {
+  return recordProductEvent({ ...event, type: 'click' });
+}
+
+export function recordExposureEvent(event = {}) {
+  return recordProductEvent({ ...event, type: 'exposure' });
+}
+
+export function recordProductEvent(event = {}) {
   const productId = String(event.productId || '').trim();
   if (!productId) {
     const error = new Error('productId is required.');
@@ -30,6 +38,7 @@ export function recordClickEvent(event = {}) {
   }
 
   const click = {
+    type: event.type || 'click',
     productId,
     time: new Date().toISOString(),
     referrer: String(event.referrer || '').slice(0, 500),
@@ -43,8 +52,21 @@ export function recordClickEvent(event = {}) {
 }
 
 export function summarizeClicks() {
+  return summarizeEvents('click');
+}
+
+export function summarizeExposures() {
+  return summarizeEvents('exposure');
+}
+
+function summarizeEvents(type) {
   const counts = new Map();
   for (const event of readEvents()) {
+    const eventType = event.type || 'click';
+    if (eventType !== type) {
+      continue;
+    }
+
     counts.set(event.productId, (counts.get(event.productId) || 0) + 1);
   }
 
@@ -52,4 +74,3 @@ export function summarizeClicks() {
     .map(([productId, clicks]) => ({ productId, clicks }))
     .sort((a, b) => b.clicks - a.clicks);
 }
-

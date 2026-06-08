@@ -372,6 +372,16 @@ select {
   color: var(--muted);
 }
 
+.load-more-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 18px;
+}
+
+.load-more-row .button[hidden] {
+  display: none;
+}
+
 .shop-hero {
   padding: 54px 0 42px;
   border-bottom: 1px solid var(--line);

@@ -13,6 +13,7 @@ const guides = (await getCollection('guides')).sort(
 );
 const featuredGuides = guides.filter((guide) => guide.data.featured).slice(0, 3);
 const hotKeywords = ['显示器', '扩展坞', '小夜灯', '路由器', '人体工学椅', 'NAS'];
+const initialProducts = products.slice(0, 24);
 const categoryCards = categories.map((category) => ({
   ...category,
   productCount: products.filter((product) => product.category === category.slug).length
@@ -76,13 +77,16 @@ const bestDeal = products.reduce((best, product) => {
           <button type="button" data-sort="save-desc">优惠</button>
         </div>
       </div>
-      <div class="grid three product-grid" id="productGrid">
-        {products.map((product) => <ProductCard product={product} />)}
+      <div class="grid three product-grid" id="productGrid" data-total-products={products.length} data-initial-products={initialProducts.length}>
+        {initialProducts.map((product) => <ProductCard product={product} />)}
       </div>
       <div class="empty-state" id="emptyProducts" hidden>
         <h3>没找到匹配商品</h3>
         <p>换个关键词，或查看全部分类。</p>
         <button class="button" type="button" id="resetSearch">查看全部商品</button>
+      </div>
+      <div class="load-more-row">
+        <button class="button secondary-light" type="button" id="loadMoreProducts" hidden>加载更多</button>
       </div>
     </div>
   </section>
@@ -127,12 +131,151 @@ const bestDeal = products.reduce((best, product) => {
     const categoryButtons = Array.from(document.querySelectorAll('[data-filter-category]'));
     const sortButtons = Array.from(document.querySelectorAll('[data-sort]'));
     const hotSearchButtons = Array.from(document.querySelectorAll('[data-search-term]'));
-    const cards = Array.from(document.querySelectorAll('#productGrid [data-product-card]'));
+    let cards = Array.from(document.querySelectorAll('#productGrid [data-product-card]'));
 
     let currentCategory = 'all';
     let currentSort = 'recommend';
+    let currentOffset = cards.length;
+    let currentTotal = Number(grid?.dataset.totalProducts || cards.length);
+    let currentHasMore = currentOffset < currentTotal;
+    let isApiMode = false;
+    const pageSize = 24;
+    const apiBase = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? 'http://127.0.0.1:8787'
+      : '';
 
     const normalize = (value) => String(value || '').trim().toLowerCase();
+    const money = (value) => Number(value || 0).toLocaleString('zh-CN', {
+      minimumFractionDigits: Number.isInteger(Number(value || 0)) ? 0 : 2,
+      maximumFractionDigits: 2
+    });
+
+    const escapeHtml = (value) => String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+
+    const getSearchText = (product) => [
+      product.name,
+      product.jdTitle,
+      product.summary,
+      product.bestFor,
+      product.typeLabel,
+      product.category,
+      ...(product.specs || []),
+      ...(product.tags || [])
+    ].join(' ').toLowerCase();
+
+    const renderProductCard = (product) => {
+      const savedAmount = Math.max(0, Number(product.jdPrice || 0) - Number(product.finalPrice || 0));
+      const detailUrl = `/products/${encodeURIComponent(product.id)}/`;
+      const purchaseUrl = `/go/${encodeURIComponent(product.id)}/`;
+      const searchText = getSearchText(product);
+      const specs = Array.isArray(product.specs) ? product.specs : [];
+
+      return `
+        <article
+          class="product-card ${product.image ? '' : 'illustrated'}"
+          data-product-card
+          data-product-id="${escapeHtml(product.id)}"
+          data-category="${escapeHtml(product.category)}"
+          data-price="${escapeHtml(product.finalPrice)}"
+          data-save="${escapeHtml(savedAmount)}"
+          data-search="${escapeHtml(searchText)}"
+        >
+          <a class="product-visual" href="${detailUrl}" aria-label="查看 ${escapeHtml(product.name)} 详情">
+            <span class="product-source-badge">京东</span>
+            ${
+              product.image
+                ? `<img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.jdTitle)}" loading="lazy" />`
+                : `<div class="product-placeholder"><span>${escapeHtml(product.typeLabel || '京东商品')}</span></div>`
+            }
+          </a>
+          <div class="product-body">
+            <div class="product-kicker">
+              <span>${escapeHtml(product.typeLabel || '京东商品')}</span>
+              <span>${product.jdSku ? `SKU ${escapeHtml(product.jdSku)}` : '京东活动页'}</span>
+            </div>
+            <h3 class="product-title"><a href="${detailUrl}">${escapeHtml(product.name)}</a></h3>
+            <p class="product-jd-title">${escapeHtml(product.jdTitle)}</p>
+            <div class="product-price-panel">
+              <div>
+                <span class="price-label">到手价</span>
+                <strong class="price-value">¥${money(product.finalPrice)}</strong>
+              </div>
+              ${savedAmount > 0 ? `<span class="save-badge">省 ¥${money(savedAmount)}</span>` : ''}
+            </div>
+            <div class="market-price">
+              <span>京东价</span>
+              <del>¥${money(product.jdPrice)}</del>
+            </div>
+            <p class="product-summary">${escapeHtml(product.summary)}</p>
+            <div class="spec-row" aria-label="关键规格">
+              ${specs.map((spec) => `<span class="spec">${escapeHtml(spec)}</span>`).join('')}
+            </div>
+            <div class="product-best-for">
+              <span>适合</span>
+              <strong>${escapeHtml(product.bestFor)}</strong>
+            </div>
+            <a class="button product-link" href="${purchaseUrl}" rel="sponsored nofollow" target="_blank">
+              <span class="product-link-full">去京东抢购</span>
+              <span class="product-link-short">购买</span>
+            </a>
+          </div>
+        </article>
+      `;
+    };
+
+    const refreshCards = () => {
+      cards = Array.from(document.querySelectorAll('#productGrid [data-product-card]'));
+      observeProductCards();
+    };
+
+    const updateLoadMore = () => {
+      const loadMore = document.getElementById('loadMoreProducts');
+      if (loadMore) {
+        loadMore.hidden = !currentHasMore;
+      }
+    };
+
+    const fetchProducts = async ({ offset = 0 } = {}) => {
+      const params = new URLSearchParams();
+      const query = searchInput ? searchInput.value.trim() : '';
+      if (query) params.set('q', query);
+      if (currentCategory !== 'all') params.set('category', currentCategory);
+      if (currentSort !== 'recommend') params.set('sort', currentSort);
+      params.set('offset', String(offset));
+      params.set('limit', String(pageSize));
+
+      const response = await fetch(`${apiBase}/api/products/search?${params.toString()}`);
+      const payload = await response.json();
+      if (!response.ok || payload.ok === false) {
+        throw new Error(payload.error || '商品搜索接口不可用');
+      }
+      return payload;
+    };
+
+    const renderApiProducts = (payload, { append = false } = {}) => {
+      if (!grid) return;
+      const html = (payload.products || []).map(renderProductCard).join('');
+      append ? grid.insertAdjacentHTML('beforeend', html) : grid.innerHTML = html;
+      currentTotal = payload.total || 0;
+      currentOffset = (payload.offset || 0) + (payload.products || []).length;
+      currentHasMore = Boolean(payload.hasMore);
+      isApiMode = true;
+      refreshCards();
+
+      if (resultCount) {
+        const query = searchInput ? searchInput.value.trim() : '';
+        resultCount.textContent = query ? `找到 ${currentTotal} 件商品` : `${currentTotal} 件商品`;
+      }
+
+      if (emptyProducts) {
+        emptyProducts.hidden = currentTotal > 0;
+      }
+      updateLoadMore();
+    };
 
     const setActiveButton = (buttons, activeValue, attribute) => {
       buttons.forEach((button) => {
@@ -197,6 +340,9 @@ const bestDeal = products.reduce((best, product) => {
         emptyProducts.hidden = matched.length > 0;
       }
 
+      currentHasMore = false;
+      updateLoadMore();
+
       if (shouldUpdateUrl) {
         updateUrl();
       }
@@ -206,9 +352,21 @@ const bestDeal = products.reduce((best, product) => {
       }
     };
 
+    const applyApiFilters = async (options = {}) => {
+      try {
+        const payload = await fetchProducts({ offset: 0 });
+        renderApiProducts(payload);
+        if (options.shouldUpdateUrl) updateUrl();
+        if (options.shouldScroll) document.getElementById('products')?.scrollIntoView({ block: 'start' });
+      } catch {
+        isApiMode = false;
+        applyFilters(options);
+      }
+    };
+
     searchForm?.addEventListener('submit', (event) => {
       event.preventDefault();
-      applyFilters({ shouldUpdateUrl: true, shouldScroll: true });
+      applyApiFilters({ shouldUpdateUrl: true, shouldScroll: true });
     });
 
     searchInput?.addEventListener('input', () => {
@@ -219,7 +377,7 @@ const bestDeal = products.reduce((best, product) => {
       button.addEventListener('click', () => {
         currentCategory = button.getAttribute('data-filter-category') || 'all';
         setActiveButton(categoryButtons, currentCategory, 'data-filter-category');
-        applyFilters({ shouldUpdateUrl: true, shouldScroll: true });
+        applyApiFilters({ shouldUpdateUrl: true, shouldScroll: true });
       });
     });
 
@@ -227,7 +385,7 @@ const bestDeal = products.reduce((best, product) => {
       button.addEventListener('click', () => {
         currentSort = button.getAttribute('data-sort') || 'recommend';
         setActiveButton(sortButtons, currentSort, 'data-sort');
-        applyFilters({ shouldUpdateUrl: true });
+        applyApiFilters({ shouldUpdateUrl: true });
       });
     });
 
@@ -236,7 +394,7 @@ const bestDeal = products.reduce((best, product) => {
         if (searchInput) {
           searchInput.value = button.getAttribute('data-search-term') || '';
         }
-        applyFilters({ shouldUpdateUrl: true, shouldScroll: true });
+        applyApiFilters({ shouldUpdateUrl: true, shouldScroll: true });
       });
     });
 
@@ -248,8 +406,63 @@ const bestDeal = products.reduce((best, product) => {
       currentSort = 'recommend';
       setActiveButton(categoryButtons, currentCategory, 'data-filter-category');
       setActiveButton(sortButtons, currentSort, 'data-sort');
-      applyFilters({ shouldUpdateUrl: true });
+      applyApiFilters({ shouldUpdateUrl: true });
     });
+
+    document.getElementById('loadMoreProducts')?.addEventListener('click', async () => {
+      try {
+        const payload = await fetchProducts({ offset: currentOffset });
+        renderApiProducts(payload, { append: true });
+      } catch {
+        currentHasMore = false;
+        updateLoadMore();
+      }
+    });
+
+    const exposedProductIds = new Set();
+    const sendExposure = (productId) => {
+      if (!productId || exposedProductIds.has(productId)) return;
+      exposedProductIds.add(productId);
+      const payload = JSON.stringify({
+        productId,
+        referrer: document.referrer,
+        userAgent: navigator.userAgent
+      });
+
+      try {
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon(`${apiBase}/api/exposures`, payload);
+        } else {
+          fetch(`${apiBase}/api/exposures`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: payload,
+            keepalive: true
+          });
+        }
+      } catch {}
+    };
+
+    const observer = 'IntersectionObserver' in window
+      ? new IntersectionObserver((entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              sendExposure(entry.target.dataset.productId);
+              observer.unobserve(entry.target);
+            }
+          });
+        }, { threshold: 0.35 })
+      : null;
+
+    function observeProductCards() {
+      if (!observer) return;
+      document.querySelectorAll('#productGrid [data-product-card]').forEach((card) => {
+        if (!card.dataset.exposureObserved) {
+          card.dataset.exposureObserved = 'true';
+          observer.observe(card);
+        }
+      });
+    }
 
     const params = new URLSearchParams(window.location.search);
     const initialQuery = params.get('q');
@@ -271,5 +484,7 @@ const bestDeal = products.reduce((best, product) => {
     setActiveButton(categoryButtons, currentCategory, 'data-filter-category');
     setActiveButton(sortButtons, currentSort, 'data-sort');
     applyFilters();
+    updateLoadMore();
+    observeProductCards();
   </script>
 </BaseLayout>

@@ -13,7 +13,9 @@ npm run server:dev
 
 - `GET /api/health`
 - `GET /api/products`
+- `GET /api/products/search`
 - `POST /api/clicks`
+- `POST /api/exposures`
 
 管理接口需要 `SERVER_ADMIN_TOKEN`，用 `Authorization: Bearer <token>` 或 `x-admin-token: <token>` 调用：
 
@@ -74,6 +76,22 @@ curl -X POST http://127.0.0.1:8787/api/admin/products/drafts \
 ```
 
 后台也支持在 `/admin/` 手动新增草稿。草稿需要补齐字段并将 `importStatus` 改为 `ready` 后才允许发布。发布会校验必填字段、京东联盟短链、分类、价格、规格和重复商品。
+
+## 前台商品接口
+
+商品搜索接口用于前台搜索、筛选、排序和加载更多：
+
+```bash
+curl 'http://127.0.0.1:8787/api/products/search?q=显示器&category=all&sort=recommend&offset=0&limit=24'
+```
+
+支持参数：
+
+- `q`：关键词。
+- `category`：分类 slug，默认 `all`。
+- `sort`：`recommend`、`price-asc`、`price-desc`、`save-desc`。
+- `offset`：分页偏移。
+- `limit`：每页数量，最大 60。
 
 ## 同域名部署
 
