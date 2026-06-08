@@ -88,7 +88,9 @@ const ProductIcon = iconByProductId[product.id as keyof typeof iconByProductId] 
       <strong>{product.bestFor}</strong>
     </div>
     <a class="button product-link" href={purchaseUrl} rel="sponsored nofollow" target="_blank">
-      去京东抢购 <ExternalLink size={17} aria-hidden="true" />
+      <span class="product-link-full">去京东抢购</span>
+      <span class="product-link-short">购买</span>
+      <ExternalLink size={17} aria-hidden="true" />
     </a>
   </div>
 </article>
