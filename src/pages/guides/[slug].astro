@@ -1,0 +1,74 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import ProductCard from '@/components/ProductCard.astro';
+import { categories, site } from '@/data/site';
+import { getProductsByCategory } from '@/data/products';
+import { getCollection, render } from 'astro:content';
+
+export async function getStaticPaths() {
+  const guides = await getCollection('guides');
+
+  return guides.map((guide) => ({
+    params: { slug: guide.id },
+    props: { guide }
+  }));
+}
+
+const { guide } = Astro.props;
+const { Content } = await render(guide);
+const products = getProductsByCategory(guide.data.category).slice(0, 3);
+const category = categories.find((item) => item.slug === guide.data.category);
+const publishDate = guide.data.publishDate.toLocaleDateString('zh-CN');
+---
+
+<BaseLayout title={guide.data.title} description={guide.data.description}>
+  <section class="page-title">
+    <div class="container">
+      <p class="eyebrow" style="color: var(--brand-strong); margin-bottom: 10px;">{category?.name ?? guide.data.category}</p>
+    </div>
+  </section>
+
+  <div class="container article-shell">
+    <article class="article">
+      <h1>{guide.data.title}</h1>
+      <p class="description">{guide.data.description}</p>
+      <div class="guide-card-meta" style="margin-top: 16px;">
+        <span>{publishDate}</span>
+        <span>·</span>
+        <span>{guide.data.tags.join(' / ')}</span>
+      </div>
+      <div class="article-content">
+        <Content />
+      </div>
+    </article>
+
+    <aside class="sidebar">
+      <div class="sidebar-box">
+        <strong>推广披露</strong>
+        <p>{site.disclosure}</p>
+      </div>
+      <div class="sidebar-box">
+        <strong>选购提醒</strong>
+        <p>价格、库存和优惠以京东实时页面为准，下单前建议再核对规格和店铺售后。</p>
+      </div>
+    </aside>
+  </div>
+
+  {
+    products.length > 0 && (
+      <section class="section band">
+        <div class="container">
+          <div class="section-header">
+            <div>
+              <h2>相关商品</h2>
+              <p>从当前分类里挑选几件商品，点击后进入京东查看实时价格和库存。</p>
+            </div>
+          </div>
+          <div class="grid three">
+            {products.map((product) => <ProductCard product={product} />)}
+          </div>
+        </div>
+      </section>
+    )
+  }
+</BaseLayout>

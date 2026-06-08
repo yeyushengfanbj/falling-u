@@ -1,0 +1,108 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="工具" description="大众数码和家用存储选购工具，包括显示器 PPI 和 NAS 容量估算。">
+  <section class="page-title">
+    <div class="container">
+      <h1>工具</h1>
+      <p>用小工具快速判断参数是否适合自己，再回到商品清单做选择。</p>
+    </div>
+  </section>
+
+  <section class="section tight">
+    <div class="container calculator">
+      <article class="tool-panel">
+        <h2>显示器 PPI 计算器</h2>
+        <p>输入尺寸和分辨率，判断文字清晰度是否适合办公、学习和日常浏览。</p>
+        <div class="form-grid">
+          <div class="field">
+            <label for="monitorSize">尺寸，英寸</label>
+            <input id="monitorSize" type="number" min="10" step="0.1" value="27" />
+          </div>
+          <div class="field">
+            <label for="monitorWidth">横向分辨率</label>
+            <input id="monitorWidth" type="number" min="1" step="1" value="3840" />
+          </div>
+          <div class="field">
+            <label for="monitorHeight">纵向分辨率</label>
+            <input id="monitorHeight" type="number" min="1" step="1" value="2160" />
+          </div>
+        </div>
+        <div class="result" aria-live="polite">
+          <div class="result-line">
+            <span>PPI</span>
+            <strong id="ppiResult">163</strong>
+          </div>
+          <div class="result-line">
+            <span>建议</span>
+            <strong id="ppiAdvice">适合高锐度办公</strong>
+          </div>
+        </div>
+      </article>
+
+      <article class="tool-panel">
+        <h2>NAS 容量估算</h2>
+        <p>按现有数据和年增长估算三年后容量需求。</p>
+        <div class="form-grid">
+          <div class="field">
+            <label for="currentData">当前数据，TB</label>
+            <input id="currentData" type="number" min="0" step="0.1" value="2" />
+          </div>
+          <div class="field">
+            <label for="yearlyGrowth">每年增长，TB</label>
+            <input id="yearlyGrowth" type="number" min="0" step="0.1" value="1.5" />
+          </div>
+          <div class="field">
+            <label for="years">规划年限</label>
+            <input id="years" type="number" min="1" step="1" value="3" />
+          </div>
+        </div>
+        <div class="result" aria-live="polite">
+          <div class="result-line">
+            <span>预计数据量</span>
+            <strong id="nasResult">6.5 TB</strong>
+          </div>
+          <div class="result-line">
+            <span>建议硬盘档位</span>
+            <strong id="nasAdvice">8 TB 起步</strong>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <script>
+    const byId = (id) => document.getElementById(id);
+
+    const updatePpi = () => {
+      const size = Number(byId('monitorSize')?.value || 0);
+      const width = Number(byId('monitorWidth')?.value || 0);
+      const height = Number(byId('monitorHeight')?.value || 0);
+      const ppi = size > 0 ? Math.sqrt(width ** 2 + height ** 2) / size : 0;
+      const rounded = Math.round(ppi);
+      const advice =
+        rounded >= 155 ? '适合高锐度办公' : rounded >= 110 ? '常规办公够用' : '文字锐度偏低';
+
+      byId('ppiResult').textContent = String(rounded);
+      byId('ppiAdvice').textContent = advice;
+    };
+
+    const updateNas = () => {
+      const current = Number(byId('currentData')?.value || 0);
+      const growth = Number(byId('yearlyGrowth')?.value || 0);
+      const years = Number(byId('years')?.value || 0);
+      const total = Math.max(0, current + growth * years);
+      const bands = [4, 8, 12, 16, 20, 24, 32, 48, 64];
+      const band = bands.find((item) => item >= total) || 64;
+
+      byId('nasResult').textContent = `${total.toFixed(1)} TB`;
+      byId('nasAdvice').textContent = `${band} TB 起步`;
+    };
+
+    ['monitorSize', 'monitorWidth', 'monitorHeight'].forEach((id) => byId(id)?.addEventListener('input', updatePpi));
+    ['currentData', 'yearlyGrowth', 'years'].forEach((id) => byId(id)?.addEventListener('input', updateNas));
+    updatePpi();
+    updateNas();
+  </script>
+</BaseLayout>

@@ -1,0 +1,33 @@
+{
+  "name": "falling-u",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "server:dev": "node server/index.mjs",
+    "server:start": "NODE_ENV=production node server/index.mjs",
+    "audit:catalog": "node scripts/audit-catalog.mjs",
+    "audit:catalog:strict": "node scripts/audit-catalog.mjs --strict",
+    "check:links": "node scripts/check-affiliate-links.mjs",
+    "import:jd": "node scripts/import-jd-shares.mjs",
+    "merge:drafts": "node scripts/merge-product-drafts.mjs",
+    "spec:list": "openspec list",
+    "spec:list:all": "openspec list && openspec list --specs",
+    "spec:validate": "openspec validate --all --strict",
+    "spec:view": "openspec view",
+    "prebuild": "npm run check:links",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/sitemap": "^3.7.3",
+    "astro": "^6.4.4",
+    "lucide-astro": "^0.468.0"
+  },
+  "devDependencies": {
+    "@fission-ai/openspec": "^1.4.1",
+    "typescript": "^5.9.3"
+  }
+}

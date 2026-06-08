@@ -1,0 +1,24 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import GuideCard from '@/components/GuideCard.astro';
+import { getCollection } from 'astro:content';
+
+const guides = (await getCollection('guides')).sort(
+  (a, b) => b.data.publishDate.getTime() - a.data.publishDate.getTime()
+);
+---
+
+<BaseLayout title="选购指南" description="面向大众消费者的数码、电脑配件、家居办公和生活小物选购指南。">
+  <section class="page-title">
+    <div class="container">
+      <h1>选购指南</h1>
+      <p>围绕真实购买问题写内容，再把合适商品放在自然位置，帮助用户少踩坑。</p>
+    </div>
+  </section>
+
+  <section class="section tight">
+    <div class="container grid two">
+      {guides.map((guide) => <GuideCard guide={guide} />)}
+    </div>
+  </section>
+</BaseLayout>

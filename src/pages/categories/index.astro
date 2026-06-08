@@ -1,0 +1,73 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import CategoryCard from '@/components/CategoryCard.astro';
+import ProductCard from '@/components/ProductCard.astro';
+import { categories, site } from '@/data/site';
+import { products, getProductsByCategory } from '@/data/products';
+
+const categoryCards = categories.map((category) => ({
+  ...category,
+  productCount: getProductsByCategory(category.slug).length
+}));
+---
+
+<BaseLayout title="商品分类" description="按数码电器、电脑配件、存储网络、家居办公和生活小物浏览京东好物清单。">
+  <section class="page-title">
+    <div class="container">
+      <h1>商品分类</h1>
+      <p>按商品类型浏览清单。当前已接入 {products.length} 件精选商品，后续会继续扩展更多品牌和型号。</p>
+    </div>
+  </section>
+
+  <section class="section tight">
+    <div class="container">
+      <div class="section-header">
+        <div>
+          <h2>分类入口</h2>
+          <p>选择一个商品分类，查看对应商品和选购指南。</p>
+        </div>
+      </div>
+      <div class="grid three">
+        {categoryCards.map((category) => <CategoryCard {...category} />)}
+      </div>
+    </div>
+  </section>
+
+  <section class="section band">
+    <div class="container">
+      <div class="section-header">
+        <div>
+          <h2>全部商品</h2>
+          <p>{site.disclosure}</p>
+        </div>
+      </div>
+      <div class="grid three product-grid">
+        {products.map((product) => <ProductCard product={product} />)}
+      </div>
+    </div>
+  </section>
+
+  {
+    categories.map((category) => {
+      const categoryProducts = getProductsByCategory(category.slug);
+      return (
+        categoryProducts.length > 0 && (
+          <section class="section">
+            <div class="container">
+              <div class="section-header">
+                <div>
+                  <h2>{category.name}</h2>
+                  <p>{category.description}</p>
+                </div>
+                <a class="text-link" href={`/categories/${category.slug}/`}>查看分类</a>
+              </div>
+              <div class="grid three product-grid">
+                {categoryProducts.map((product) => <ProductCard product={product} />)}
+              </div>
+            </div>
+          </section>
+        )
+      );
+    })
+  }
+</BaseLayout>

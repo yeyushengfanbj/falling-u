@@ -1,0 +1,31 @@
+---
+import { ArrowRight } from 'lucide-astro';
+
+type Props = {
+  slug: string;
+  name: string;
+  description: string;
+  productCount?: number;
+  targetCount?: number;
+};
+
+const { slug, name, description, productCount, targetCount } = Astro.props;
+---
+
+<article class="category-card">
+  {
+    typeof productCount === 'number' && (
+      <div class="category-card-meta">
+        <span>已接入 {productCount} 件</span>
+        {typeof targetCount === 'number' && <span>目标 {targetCount} 件</span>}
+      </div>
+    )
+  }
+  <h3><a href={`/categories/${slug}/`}>{name}</a></h3>
+  <p>{description}</p>
+  <p>
+    <a class="text-link" href={`/categories/${slug}/`}>
+      查看清单 <ArrowRight size={16} aria-hidden="true" />
+    </a>
+  </p>
+</article>

@@ -1,0 +1,76 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import GuideCard from '@/components/GuideCard.astro';
+import ProductCard from '@/components/ProductCard.astro';
+import { categories } from '@/data/site';
+import { getProductsByCategory } from '@/data/products';
+import { getCollection } from 'astro:content';
+
+export function getStaticPaths() {
+  return categories.map((category) => ({
+    params: { slug: category.slug },
+    props: { category }
+  }));
+}
+
+const { category } = Astro.props;
+const guides = (await getCollection('guides'))
+  .filter((guide) => guide.data.category === category.slug)
+  .sort((a, b) => b.data.publishDate.getTime() - a.data.publishDate.getTime());
+const products = getProductsByCategory(category.slug);
+---
+
+<BaseLayout title={category.name} description={category.description}>
+  <section class="page-title">
+    <div class="container">
+      <h1>{category.name}</h1>
+      <p>{category.description}</p>
+    </div>
+  </section>
+
+  <section class="section tight">
+    <div class="container">
+      <div class="section-header">
+        <div>
+          <h2>商品清单</h2>
+          <p>先看这个分类下的商品、到手价和关键规格，再进入京东查看实时价格和库存。</p>
+        </div>
+      </div>
+      <div class="grid three product-grid">
+        {
+          products.length > 0 ? (
+            products.map((product) => <ProductCard product={product} />)
+          ) : (
+            <article class="category-card">
+              <h3>待补充商品</h3>
+              <p>在 src/data/products.json 添加这个分类的商品后会自动出现在这里。</p>
+            </article>
+          )
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="section band">
+    <div class="container">
+      <div class="section-header">
+        <div>
+          <h2>相关指南</h2>
+          <p>用指南解释选购逻辑，再回到合适的商品清单。</p>
+        </div>
+      </div>
+      <div class="grid two">
+        {
+          guides.length > 0 ? (
+            guides.map((guide) => <GuideCard guide={guide} />)
+          ) : (
+            <article class="category-card">
+              <h3>待补充指南</h3>
+              <p>这个分类还没有文章，新增 Markdown 后会自动显示在这里。</p>
+            </article>
+          )
+        }
+      </div>
+    </div>
+  </section>
+</BaseLayout>

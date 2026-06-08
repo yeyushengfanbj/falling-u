@@ -1,0 +1,94 @@
+---
+import { Armchair, Cable, ExternalLink, HardDrive, LampDesk, Monitor, Router, ShoppingBag } from 'lucide-astro';
+import type { Product } from '@/data/products';
+
+type Props = {
+  product: Product;
+};
+
+const { product } = Astro.props;
+const productDetailUrl = `/products/${product.id}/`;
+const purchaseUrl = `/go/${product.id}/`;
+const savedAmount = Math.max(0, product.jdPrice - product.finalPrice);
+const searchText = [
+  product.name,
+  product.jdTitle,
+  product.summary,
+  product.bestFor,
+  product.typeLabel,
+  product.category,
+  ...product.specs,
+  ...product.tags
+]
+  .join(' ')
+  .toLowerCase();
+const displayPrice = (price: number) =>
+  new Intl.NumberFormat('zh-CN', {
+    minimumFractionDigits: Number.isInteger(price) ? 0 : 2,
+    maximumFractionDigits: 2
+  }).format(price);
+
+const iconByProductId = {
+  'monitor-4k-27': Monitor,
+  'dock-usbc': Cable,
+  'nas-drive': HardDrive,
+  'router-25g': Router,
+  'chair-office': Armchair,
+  'desk-lamp': LampDesk
+};
+const ProductIcon = iconByProductId[product.id as keyof typeof iconByProductId] ?? ShoppingBag;
+---
+
+<article
+  class:list={['product-card', !product.image && 'illustrated']}
+  data-product-card
+  data-product-id={product.id}
+  data-category={product.category}
+  data-price={product.finalPrice}
+  data-save={savedAmount}
+  data-search={searchText}
+>
+  <a class="product-visual" href={productDetailUrl} aria-label={`查看 ${product.name} 详情`}>
+    <span class="product-source-badge">京东</span>
+    {
+      product.image ? (
+        <img src={product.image} alt={product.jdTitle} loading="lazy" />
+      ) : (
+        <div class="product-placeholder">
+          <ProductIcon size={44} />
+          <span>{product.typeLabel}</span>
+        </div>
+      )
+    }
+  </a>
+  <div class="product-body">
+    <div class="product-kicker">
+      <span>{product.typeLabel}</span>
+      <span>{product.jdSku ? `SKU ${product.jdSku}` : '京东活动页'}</span>
+    </div>
+    <h3 class="product-title"><a href={productDetailUrl}>{product.name}</a></h3>
+    <p class="product-jd-title">{product.jdTitle}</p>
+    <div class="product-price-panel">
+      <div>
+        <span class="price-label">到手价</span>
+        <strong class="price-value">¥{displayPrice(product.finalPrice)}</strong>
+      </div>
+      {savedAmount > 0 && <span class="save-badge">省 ¥{displayPrice(savedAmount)}</span>}
+    </div>
+    <div class="market-price">
+      <span>京东价</span>
+      <del>¥{displayPrice(product.jdPrice)}</del>
+    </div>
+    <p class="product-summary">{product.summary}</p>
+    <div class="spec-row" aria-label="关键规格">
+      {product.specs.map((spec) => <span class="spec">{spec}</span>)}
+    </div>
+    <div class="product-best-for">
+      <span>适合</span>
+      <strong>{product.bestFor}</strong>
+    </div>
+    <a class="button product-link" href={purchaseUrl} rel="sponsored nofollow" target="_blank">
+      去京东抢购 <ExternalLink size={17} aria-hidden="true" />
+    </a>
+  </div>
+</article>

@@ -1,0 +1,145 @@
+---
+import { Armchair, Cable, ExternalLink, HardDrive, LampDesk, Monitor, Router, ShoppingBag } from 'lucide-astro';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import ProductCard from '@/components/ProductCard.astro';
+import { categories, site } from '@/data/site';
+import { products } from '@/data/products';
+import type { Product } from '@/data/products';
+
+type Props = {
+  product: Product;
+};
+
+export function getStaticPaths() {
+  return products.map((product) => ({
+    params: { id: product.id },
+    props: { product }
+  }));
+}
+
+const { product } = Astro.props;
+const category = categories.find((item) => item.slug === product.category);
+const purchaseUrl = `/go/${product.id}/`;
+const savedAmount = Math.max(0, product.jdPrice - product.finalPrice);
+const displayPrice = (price: number) =>
+  new Intl.NumberFormat('zh-CN', {
+    minimumFractionDigits: Number.isInteger(price) ? 0 : 2,
+    maximumFractionDigits: 2
+  }).format(price);
+
+const sameCategoryProducts = products.filter((item) => item.category === product.category && item.id !== product.id);
+const fallbackProducts = products.filter((item) => item.category !== product.category && item.id !== product.id);
+const relatedProducts = [...sameCategoryProducts, ...fallbackProducts].slice(0, 3);
+
+const iconByProductId = {
+  'monitor-4k-27': Monitor,
+  'dock-usbc': Cable,
+  'nas-drive': HardDrive,
+  'router-25g': Router,
+  'chair-office': Armchair,
+  'desk-lamp': LampDesk
+};
+const ProductIcon = iconByProductId[product.id as keyof typeof iconByProductId] ?? ShoppingBag;
+---
+
+<BaseLayout title={product.name} description={product.summary}>
+  <section class="product-detail">
+    <div class="container">
+      <div class="breadcrumb">
+        <a href="/">首页</a>
+        <span>/</span>
+        <a href="/categories/">商品分类</a>
+        <span>/</span>
+        {category ? <a href={`/categories/${category.slug}/`}>{category.name}</a> : <span>商品详情</span>}
+      </div>
+
+      <div class="product-detail-grid">
+        <div class="detail-gallery">
+          <div class="detail-visual">
+            <span class="product-source-badge">京东</span>
+            {
+              product.image ? (
+                <img src={product.image} alt={product.jdTitle} />
+              ) : (
+                <div class="detail-placeholder">
+                  <ProductIcon size={76} />
+                  <strong>{product.typeLabel}</strong>
+                  <span>暂未接入可靠京东标准商品图</span>
+                </div>
+              )
+            }
+          </div>
+          <div class="detail-image-note">
+            {product.image ? '图片使用京东商品图域名；最终款式、赠品和库存以京东详情页为准。' : '此商品短链当前指向京东活动页，先不使用不对标图片。'}
+          </div>
+        </div>
+
+        <div class="detail-info">
+          <div class="detail-kicker">
+            <span>{category?.name ?? product.category}</span>
+            <span>{product.jdSku ? `京东 SKU ${product.jdSku}` : '京东活动页'}</span>
+          </div>
+          <h1>{product.name}</h1>
+          <p class="detail-jd-title">{product.jdTitle}</p>
+
+          <div class="detail-price-panel">
+            <div>
+              <span class="price-label">到手价</span>
+              <strong class="detail-price">¥{displayPrice(product.finalPrice)}</strong>
+            </div>
+            <div class="detail-market-price">
+              <span>京东价</span>
+              <del>¥{displayPrice(product.jdPrice)}</del>
+            </div>
+            {savedAmount > 0 && <span class="detail-save">预计省 ¥{displayPrice(savedAmount)}</span>}
+          </div>
+
+          <div class="detail-actions">
+            <a class="button detail-buy" href={purchaseUrl} rel="sponsored nofollow" target="_blank">
+              去京东抢购 <ExternalLink size={18} aria-hidden="true" />
+            </a>
+            <a class="button secondary-light" href={category ? `/categories/${category.slug}/` : '/#products'}>
+              查看同类商品
+            </a>
+          </div>
+
+          <div class="detail-block">
+            <h2>适合场景</h2>
+            <p>{product.bestFor}</p>
+          </div>
+
+          <div class="detail-block">
+            <h2>商品说明</h2>
+            <p>{product.summary}</p>
+          </div>
+
+          <div class="detail-block">
+            <h2>关键规格</h2>
+            <div class="spec-row">
+              {product.specs.map((spec) => <span class="spec">{spec}</span>)}
+            </div>
+          </div>
+
+          <div class="detail-disclosure">
+            {site.disclosure} 商品价格、优惠券、库存和活动状态可能变动，请以下单前京东页面显示为准。
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section band">
+    <div class="container">
+      <div class="section-header">
+        <div>
+          <h2>相关商品</h2>
+          <p>继续查看同类或相近商品。</p>
+        </div>
+        <a class="text-link" href="/#products">回到全部商品</a>
+      </div>
+      <div class="grid three product-grid">
+        {relatedProducts.map((item) => <ProductCard product={item} />)}
+      </div>
+    </div>
+  </section>
+</BaseLayout>

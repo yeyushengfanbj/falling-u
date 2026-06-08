@@ -1,0 +1,34 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { site } from '@/data/site';
+---
+
+<BaseLayout title="关于" description="falling-u 好物的定位、盈利模式、获客方式和合规说明。">
+  <section class="page-title">
+    <div class="container">
+      <h1>关于这个项目</h1>
+      <p>{site.description}</p>
+    </div>
+  </section>
+
+  <section class="section tight">
+    <div class="container article">
+      <div class="article-content" style="margin-top: 0;">
+        <h2>怎么盈利</h2>
+        <p>主要通过京东联盟 CPS 佣金盈利。用户从站内点击推广链接进入京东并完成有效订单后，联盟后台会按规则结算佣金。</p>
+
+        <h2>怎么让用户知道网站</h2>
+        <p>不要先推广网站名。先写用户正在搜索的具体问题，例如“千元显示器推荐”“Type-C 扩展坞避坑”“宿舍小夜灯怎么选”。用户通过搜索进入文章或商品列表，再点击合适的京东推广链接。</p>
+
+        <h2>第一阶段目标</h2>
+        <p>前 90 天重点是上线、收录、商品数量和点击数据。建议先扩展稳定商品库和高质量选购内容，再考虑价格更新、自动排行榜和更多平台。</p>
+
+        <h2>成本判断</h2>
+        <p>MVP 可以保持低成本：域名、服务器、备案和基础部署即可。真正的长期成本是内容生产、关键词研究和渠道分发。</p>
+
+        <h2>合规说明</h2>
+        <p>{site.disclosure} 如果使用中国大陆服务器，域名需要完成 ICP 备案后再正式提供服务。</p>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

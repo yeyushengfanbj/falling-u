@@ -1,0 +1,40 @@
+---
+import { products } from '@/data/products';
+import type { Product } from '@/data/products';
+
+type Props = {
+  product: Product;
+};
+
+export function getStaticPaths() {
+  return products.map((product) => ({
+    params: { id: product.id },
+    props: { product }
+  }));
+}
+
+const { product } = Astro.props;
+const affiliateUrl = product.affiliateUrl;
+---
+
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="robots" content="noindex,nofollow" />
+    <meta http-equiv="refresh" content={`0;url=${affiliateUrl}`} />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>正在跳转到京东</title>
+  </head>
+  <body>
+    <main>
+      <p>正在前往京东：{product.name}</p>
+      <p>
+        <a href={affiliateUrl} rel="sponsored nofollow">继续前往京东</a>
+      </p>
+    </main>
+    <script define:vars={{ affiliateUrl }}>
+      window.location.replace(affiliateUrl);
+    </script>
+  </body>
+</html>
